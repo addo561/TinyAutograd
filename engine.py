@@ -1,7 +1,7 @@
 import math
 
 class Value:
-    def __init__(self, data, children=()):
+    def __init__(self, data, children=(),op=''):
         # The actual number (e.g., 3.0)
         self.data = data
         # The derivative of the final loss with respect to this value.
