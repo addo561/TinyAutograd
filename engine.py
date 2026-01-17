@@ -16,6 +16,9 @@ class Value:
         # so we can rebuild the graph later.
         self._prev = set(children)
 
+        #set opeartor  to  visualize
+        self.op  = op
+
     def __repr__(self):
         return f'Value(data={self.data}, grad={self.grad})'
 
@@ -25,7 +28,7 @@ class Value:
         other = other if isinstance(other, Value) else Value(other)
         
         # Create the new node. We must list (self, other) as children to link the graph.
-        out = Value(self.data + other.data, (self, other))
+        out = Value(self.data + other.data, (self, other),'+')
 
         # Define how to propagate the gradient backwards for addition.
         # Addition just passes the gradient equally to both parents.
@@ -39,7 +42,7 @@ class Value:
 
     def __mul__(self, other):
         other = other if isinstance(other, Value) else Value(other)
-        out = Value(self.data * other.data, (self, other))
+        out = Value(self.data * other.data, (self, other),'*')
 
         # For multiplication, the gradient of one side depends on the *data* of the other side.
         # (Chain Rule: d(xy)/dx = y)
@@ -52,7 +55,7 @@ class Value:
 
     def __pow__(self, other):
         # Note: 'other' is expected to be a simple number (int/float), not a Value object here.
-        out = Value(self.data ** other, (self,))
+        out = Value(self.data ** other, (self,),f'**{other}')
 
         # Power Rule: d(x^n)/dx = n * x^(n-1)
         def _backward():
@@ -66,7 +69,7 @@ class Value:
     def relu(self):
         # If data < 0, output is 0. Otherwise, pass it through.
         # We MUST pass (self,) as a child or the graph breaks here!
-        out = Value(0 if self.data < 0 else self.data, (self,))
+        out = Value(0 if self.data < 0 else self.data, (self,), 'ReLU')
 
         def _backward():
             # If the value was negative (and reset to 0), no gradient passes through.
@@ -80,7 +83,7 @@ class Value:
         # The math formula for tanh
         x = self.data
         t = (math.exp(2*x) - 1) / (math.exp(2*x) + 1)
-        out = Value(t, (self,))
+        out = Value(t, (self,),'Tanh')
         
         def _backward():
             # Derivative of tanh is (1 - tanh^2)
@@ -93,7 +96,7 @@ class Value:
         x = self.data
         # Sigmoid formula: 1 / (1 + e^-x)
         s = 1 / (1 + math.exp(-x))
-        out = Value(s, (self,))
+        out = Value(s, (self,),'Sigmoid')
         
         def _backward():
             # Derivative of sigmoid is s * (1 - s)
