@@ -41,6 +41,32 @@ class Neuron(Module):
     
 class Layer(Module):
     def __init__(self,n_inputs,n_outs,nlinear):
-        self.layers = []
+        self.neurons = [Neuron(n_inputs,nlinear) for _ in range(n_outs)]
 
-        
+    def __call__(self,x):
+        o = [n(x) for n in self.neurons]
+        return o
+    
+    def parameters(self):
+        return [p for n in self.neurons for p in n.parameters()]
+    
+    def __repr__(self):
+        return f'Layer of {', '.join(str(n) for n in self.neurons)}'
+
+
+class MLP(Module):
+
+    def __init__(self, nin, nouts,non_linearities):
+        sz = [nin] + nouts
+        self.layers = [Layer(sz[i], sz[i+1],non_linearities) for i in range(len(nouts))]
+
+    def __call__(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+    def parameters(self):
+        return [p for layer in self.layers for p in layer.parameters()]
+
+    def __repr__(self):
+        return f"MLP of [{', '.join(str(layer) for layer in self.layers)}]"
