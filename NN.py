@@ -1,62 +1,52 @@
-### PYTORCH-LIKE ABSTRACTIONS
-from engine import Value
 import random
+from engine import Value
+
 class Module:
-    def parameters(self):
-        #list of all Value objects  that need updating
-        return []
+
     def zero_grad(self):
-        #sets  all parameters grads to zero
-        for p in self.parameters:
+        for p in self.parameters():
             p.grad = 0
 
+    def parameters(self):
+        return []
 
 class Neuron(Module):
-    def __init__(self,inputs_n,nonLinearity=True):
-        #weights  the same size as input 
-        self.w = [Value(random.uniform(0,1)) for _ in range(inputs_n)] 
-        #bias is just added 
-        self.b = Value(1)
-        # non- linearity  whether relu,tanh
-        self.nonLinearity  = nonLinearity
-        self.inputs_n  = inputs_n
 
-    def __call__(self,x):
-        # Does the y = wx + b
-        y = sum(( w * x for w,x in zip(self.w,x)),self.b)
-        if self.nonLinearity:
-            y  = y.relu()
-        else:
-            y = y.tanh()   
-        return y
-    
+    def __init__(self, nin, nonlin=True):
+        self.w = [Value(random.uniform(-1,1)) for _ in range(nin)]
+        self.b = Value(0)
+        self.nonlin = nonlin
+
+    def __call__(self, x):
+        act = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
+        return act.relu() if self.nonlin else act
+
     def parameters(self):
-        #return all parameters ,w is already list so bias should be list 
         return self.w + [self.b]
-    
-    def __repr__(self):
-        return f"{'ReLU' if self.nonLinearity else 'Linear'}Neuron({len(self.w)})"
-    
-class Layer(Module):
-    def __init__(self,n_inputs,n_outs,**kwargs):
-        self.neurons = [Neuron(n_inputs,**kwargs) for _ in range(n_outs)]
 
-    def __call__(self,x):
-        o = [n(x) for n in self.neurons]
-        return o[0] if len(o) == 1 else o
-    
+    def __repr__(self):
+        return f"{'ReLU' if self.nonlin else 'Linear'}Neuron({len(self.w)})"
+
+class Layer(Module):
+
+    def __init__(self, nin, nout, **kwargs):
+        self.neurons = [Neuron(nin, **kwargs) for _ in range(nout)]
+
+    def __call__(self, x):
+        out = [n(x) for n in self.neurons]
+        return out[0] if len(out) == 1 else out
+
     def parameters(self):
         return [p for n in self.neurons for p in n.parameters()]
-    
-    def __repr__(self):
-        return f'Layer of {', '.join(str(n) for n in self.neurons)}'
 
+    def __repr__(self):
+        return f"Layer of [{', '.join(str(n) for n in self.neurons)}]"
 
 class MLP(Module):
 
     def __init__(self, nin, nouts):
         sz = [nin] + nouts
-        self.layers = [Layer(sz[i], sz[i+1],nonLinearity=i!=len(nouts)-1) for i in range(len(nouts))]
+        self.layers = [Layer(sz[i], sz[i+1], nonlin=i!=len(nouts)-1) for i in range(len(nouts))]
 
     def __call__(self, x):
         for layer in self.layers:
