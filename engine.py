@@ -131,27 +131,24 @@ class Value:
     # The Engine (Backpropagation) 
 
     def backward(self):
-        # 1. Topological Sort
-        # We need to lay out the graph flat so we visit parents only after children.
         topo = []
         visited = set()
-        
-        def build_topo(node):
-            if node in visited:
-                return
-            visited.add(node)
-            # Recursively visit all children first
-            for child in node._prev:
-                build_topo(child)
-            # Once children are processed, add myself to the list
-            topo.append(node)
-
+        def build_topo(v):
+            if v not in visited:
+                visited.add(v)
+                for child in v._prev:
+                    build_topo(child)
+                topo.append(v)
         build_topo(self)
-        
-        # 2. Go backwards
-        # Start the chain reaction by setting the final node's gradient to 1.0
+
         self.grad = 1.0
-        
-        # Go through the list in reverse order (Output -> Input)
         for node in reversed(topo):
             node._backward()
+    def log(self):
+        out = Value(math.log(self.data), (self,), 'log')
+        def _backward():
+            # Derivative of log(x) is 1/x
+            self.grad += (1.0 / self.data) * out.grad
+        out._backward = _backward
+        return out
+    
