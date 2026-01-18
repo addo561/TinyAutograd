@@ -12,7 +12,7 @@ class Module:
 
 
 class Neuron(Module):
-    def __init__(self,inputs_n,nonLinearity:str):
+    def __init__(self,inputs_n,nonLinearity=True):
         #weights  the same size as input 
         self.w = [Value(random.uniform(0,1)) for _ in range(inputs_n)] 
         #bias is just added 
@@ -24,12 +24,10 @@ class Neuron(Module):
     def __call__(self,x):
         # Does the y = wx + b
         y = sum(( w * x for w,x in zip(self.w,x)),self.b)
-        if self.nonLinearity=='ReLU':
+        if self.nonLinearity:
             y  = y.relu()
-        elif self.nonLinearity=='Tanh':
+        else:
             y = y.tanh()   
-        elif self.nonLinearity=='Sigmoid'  :
-            y = y.sigmoid()
         return y
     
     def parameters(self):
@@ -37,15 +35,15 @@ class Neuron(Module):
         return self.w + [self.b]
     
     def __repr__(self):
-        return f'{self.nonLinearity}Neuron{self.inputs_n}'
+        return f"{'ReLU' if self.nonLinearity else 'Linear'}Neuron({len(self.w)})"
     
 class Layer(Module):
-    def __init__(self,n_inputs,n_outs,nlinear):
-        self.neurons = [Neuron(n_inputs,nlinear) for _ in range(n_outs)]
+    def __init__(self,n_inputs,n_outs,**kwargs):
+        self.neurons = [Neuron(n_inputs,**kwargs) for _ in range(n_outs)]
 
     def __call__(self,x):
         o = [n(x) for n in self.neurons]
-        return o
+        return o[0] if len(o) == 1 else o
     
     def parameters(self):
         return [p for n in self.neurons for p in n.parameters()]
@@ -56,9 +54,9 @@ class Layer(Module):
 
 class MLP(Module):
 
-    def __init__(self, nin, nouts,non_linearities):
+    def __init__(self, nin, nouts):
         sz = [nin] + nouts
-        self.layers = [Layer(sz[i], sz[i+1],non_linearities) for i in range(len(nouts))]
+        self.layers = [Layer(sz[i], sz[i+1],nonLinearity=i!=len(nouts)-1) for i in range(len(nouts))]
 
     def __call__(self, x):
         for layer in self.layers:
